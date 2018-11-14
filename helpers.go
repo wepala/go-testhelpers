@@ -1,7 +1,11 @@
 package testhelpers
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -27,8 +31,8 @@ func NewClientRecorder(fileName string, verbose bool) *http.Client {
 	return &http.Client{
 		Transport: RoundTripFunc(func(req *http.Request) *http.Response {
 
-			reqf, err := os.Create("./fixtures/" + fileName + "_request")
-			respf, err := os.Create("./fixtures/" + fileName + "_response")
+			reqf, err := os.Create(fileName + "_request")
+			respf, err := os.Create(fileName + "_response")
 			if err == nil {
 				//record request
 				requestBytes, _ := httputil.DumpRequestOut(req, verbose)
@@ -56,4 +60,28 @@ func NewClientRecorder(fileName string, verbose bool) *http.Client {
 
 		}),
 	}
+}
+
+func LoadHTTPRequestFixture(data []byte) (*http.Request, error) {
+	reader := bufio.NewReader(bytes.NewReader(data))
+	resp, err := http.ReadRequest(reader)
+	if err == io.EOF {
+		return resp, nil
+	}
+	return resp, err
+}
+
+func LoadHTTPResponseFixture(data []byte, req *http.Request) (*http.Response, error) {
+	reader := bufio.NewReader(bytes.NewReader(data))
+	resp, err := http.ReadResponse(reader, req)
+	if err != nil {
+		return nil, err
+	}
+	//save response body
+	b := new(bytes.Buffer)
+	io.Copy(b, resp.Body)
+	resp.Body.Close()
+	resp.Body = ioutil.NopCloser(b)
+
+	return resp, err
 }

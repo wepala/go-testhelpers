@@ -39,13 +39,18 @@ func NewClientRecorder(fileName string, verbose bool) *http.Client {
 				reqf.Write(requestBytes)
 
 				//setup regular transport that does it's thing
-				response, _ := http.DefaultTransport.RoundTrip(req)
+				response, callError := http.DefaultTransport.RoundTrip(req)
 
-				//record response
-				responseBytes, _ := httputil.DumpResponse(response, verbose)
-				respf.Write(responseBytes)
+				if callError != nil {
+					respf.Write([]byte(callError.Error()))
+					return nil
+				} else {
+					//record response
+					responseBytes, _ := httputil.DumpResponse(response, verbose)
+					respf.Write(responseBytes)
 
-				return response
+					return response
+				}
 
 			}
 			defer func() {
